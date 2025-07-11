@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Red Ball - Solid Pixel Hitbox</title>
+  <title>Red Ball - ox</title>
   <style>
     html, body {
       margin: 0;
@@ -11,27 +11,30 @@
       background: black;
       cursor: none;
     }
+
     #image {
-      display: none;
-    }
-    #overlay {
       position: absolute;
       top: 0;
       left: 0;
-      z-index: 1;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover;
+      z-index: 0;
       pointer-events: none;
     }
+
     #follower {
       position: absolute;
       width: 20px;
       height: 20px;
       background: red;
       border-radius: 50%;
-      z-index: 2;
+      z-index: 1;
       pointer-events: none;
       transform: translate(-50%, -50%);
     }
-    canvas {
+
+    #canvas {
       display: none;
     }
   </style>
@@ -40,16 +43,12 @@
 
 <img id="image" src="test.png" />
 <canvas id="canvas"></canvas>
-<canvas id="overlay"></canvas>
 <div id="follower"></div>
 
 <script>
   const img = document.getElementById('image');
-  const canvas = document.getElementById('canvas'); // hidden canvas
+  const canvas = document.getElementById('canvas'); // hidden canvas for pixel checking
   const ctx = canvas.getContext('2d');
-
-  const overlay = document.getElementById('overlay'); // visible overlay
-  const octx = overlay.getContext('2d');
 
   const follower = document.getElementById('follower');
 
@@ -68,45 +67,24 @@
     img.src = image1;
     switched = false;
     img.onload = () => {
-      drawImageAndOverlay();
+      drawImageToCanvas();
       moveFollower(startPos.x, startPos.y);
     };
   }
 
-  function drawImageAndOverlay() {
+  function drawImageToCanvas() {
     const width = window.innerWidth;
     const height = window.innerHeight;
 
     canvas.width = width;
     canvas.height = height;
-    overlay.width = width;
-    overlay.height = height;
 
     ctx.clearRect(0, 0, width, height);
-    octx.clearRect(0, 0, width, height);
-
     ctx.drawImage(img, 0, 0, width, height);
-
-    const imageData = ctx.getImageData(0, 0, width, height);
-    const data = imageData.data;
-
-    // Loop through every pixel and draw blue dot on visible canvas if alpha > 0
-    for (let y = 0; y < height; y += 2) {
-      for (let x = 0; x < width; x += 2) {
-        const index = (y * width + x) * 4;
-        const alpha = data[index + 3];
-
-        if (alpha > 0) {
-          octx.fillStyle = 'blue';
-          octx.fillRect(x, y, 1, 1);
-        }
-      }
-    }
   }
 
-  img.onload = drawImageAndOverlay;
-
-  window.addEventListener('resize', drawImageAndOverlay);
+  img.onload = drawImageToCanvas;
+  window.addEventListener('resize', drawImageToCanvas);
 
   document.addEventListener('mousemove', (e) => {
     const x = e.clientX;
@@ -115,15 +93,15 @@
     const pixel = ctx.getImageData(x, y, 1, 1).data;
     const [r, g, b, a] = pixel;
 
-    // Green = go to level 2
+    // Check for pure green to switch levels
     if (r === 0 && g === 255 && b === 0 && !switched) {
       img.src = image2;
       switched = true;
-      img.onload = drawImageAndOverlay;
+      img.onload = drawImageToCanvas;
       return;
     }
 
-    // Non-transparent = hit solid pixel → reset
+    // Touching solid pixel (not transparent) resets the level
     if (a > 0) {
       resetLevel();
       return;
