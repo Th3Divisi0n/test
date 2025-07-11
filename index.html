@@ -1,43 +1,38 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Red Ball with Hitboxes</title>
+  <meta charset="UTF-8">
+  <title>Red Ball - Solid Pixel Hitbox</title>
   <style>
     html, body {
       margin: 0;
       padding: 0;
-      height: 100%;
       overflow: hidden;
       background: black;
       cursor: none;
     }
-
     #image {
+      display: none;
+    }
+    #overlay {
       position: absolute;
       top: 0;
       left: 0;
-      width: 100vw;
-      height: 100vh;
-      object-fit: cover;
+      z-index: 1;
       pointer-events: none;
     }
-
     #follower {
       position: absolute;
       width: 20px;
       height: 20px;
       background: red;
       border-radius: 50%;
+      z-index: 2;
       pointer-events: none;
       transform: translate(-50%, -50%);
     }
-
     canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      pointer-events: none;
+      display: none;
     }
   </style>
 </head>
@@ -45,100 +40,99 @@
 
 <img id="image" src="test.png" />
 <canvas id="canvas"></canvas>
+<canvas id="overlay"></canvas>
 <div id="follower"></div>
 
 <script>
-  const follower = document.getElementById('follower');
   const img = document.getElementById('image');
-  const canvas = document.getElementById('canvas');
+  const canvas = document.getElementById('canvas'); // hidden canvas
   const ctx = canvas.getContext('2d');
+
+  const overlay = document.getElementById('overlay'); // visible overlay
+  const octx = overlay.getContext('2d');
+
+  const follower = document.getElementById('follower');
 
   const image1 = 'test.png';
   const image2 = 'test2.png';
-
   let switched = false;
 
-  // Hitboxes (blue rectangles): [x, y, width, height]
-  const hitboxes = [
-    { x: 300, y: 200, width: 100, height: 100 }, // example box
-    { x: 600, y: 400, width: 150, height: 80 },  // another
-  ];
-
-  // Starting position
   const startPos = { x: 100, y: 100 };
-
-  // Set canvas size and redraw everything
-  function updateCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-    // Draw blue hitboxes
-    ctx.strokeStyle = 'blue';
-    ctx.lineWidth = 3;
-    hitboxes.forEach(box => {
-      ctx.strokeRect(box.x, box.y, box.width, box.height);
-    });
-  }
-
-  function resetLevel() {
-    img.src = image1;
-    switched = false;
-    moveFollower(startPos.x, startPos.y);
-  }
 
   function moveFollower(x, y) {
     follower.style.left = x + 'px';
     follower.style.top = y + 'px';
   }
 
-  img.onload = () => {
-    updateCanvas();
-  };
+  function resetLevel() {
+    img.src = image1;
+    switched = false;
+    img.onload = () => {
+      drawImageAndOverlay();
+      moveFollower(startPos.x, startPos.y);
+    };
+  }
 
-  window.addEventListener('resize', updateCanvas);
+  function drawImageAndOverlay() {
+    const width = window.innerWidth;
+    const height = window.innerHeight;
 
-  document.addEventListener('mousemove', (e) => {
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
+    canvas.width = width;
+    canvas.height = height;
+    overlay.width = width;
+    overlay.height = height;
 
-    const pixel = ctx.getImageData(mouseX, mouseY, 1, 1).data;
-    const [r, g, b, a] = pixel;
+    ctx.clearRect(0, 0, width, height);
+    octx.clearRect(0, 0, width, height);
 
-    // Touching solid
-    if (a > 0) {
-      follower.style.backgroundColor = 'white';
-    } else {
-      follower.style.backgroundColor = 'red';
-    }
+    ctx.drawImage(img, 0, 0, width, height);
 
-    // Touching green = go to level 2
-    if (r === 0 && g === 255 && b === 0 && !switched) {
-      switched = true;
-      img.src = image2;
-      img.onload = updateCanvas;
-    }
+    const imageData = ctx.getImageData(0, 0, width, height);
+    const data = imageData.data;
 
-    // Check hitboxes
-    for (const box of hitboxes) {
-      if (
-        mouseX >= box.x &&
-        mouseX <= box.x + box.width &&
-        mouseY >= box.y &&
-        mouseY <= box.y + box.height
-      ) {
-        console.log("Hitbox touched! Resetting...");
-        resetLevel();
-        return;
+    // Loop through every pixel and draw blue dot on visible canvas if alpha > 0
+    for (let y = 0; y < height; y += 2) {
+      for (let x = 0; x < width; x += 2) {
+        const index = (y * width + x) * 4;
+        const alpha = data[index + 3];
+
+        if (alpha > 0) {
+          octx.fillStyle = 'blue';
+          octx.fillRect(x, y, 1, 1);
+        }
       }
     }
+  }
 
-    // Move red ball
-    moveFollower(mouseX, mouseY);
+  img.onload = drawImageAndOverlay;
+
+  window.addEventListener('resize', drawImageAndOverlay);
+
+  document.addEventListener('mousemove', (e) => {
+    const x = e.clientX;
+    const y = e.clientY;
+
+    const pixel = ctx.getImageData(x, y, 1, 1).data;
+    const [r, g, b, a] = pixel;
+
+    // Green = go to level 2
+    if (r === 0 && g === 255 && b === 0 && !switched) {
+      img.src = image2;
+      switched = true;
+      img.onload = drawImageAndOverlay;
+      return;
+    }
+
+    // Non-transparent = hit solid pixel → reset
+    if (a > 0) {
+      resetLevel();
+      return;
+    }
+
+    moveFollower(x, y);
   });
 
-  // Set initial position
+  // Initial placement
   moveFollower(startPos.x, startPos.y);
 </script>
 
