@@ -4,12 +4,25 @@
   <meta charset="UTF-8" />
   <title>Red Ball Avoids PNG</title>
   <style>
-    body {
+    html, body {
       margin: 0;
-      background: black;
+      padding: 0;
+      height: 100%;
       overflow: hidden;
+      background: black;
       cursor: none;
     }
+
+    #image {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      object-fit: cover; /* Stretch and maintain aspect ratio */
+      pointer-events: none;
+    }
+
     #follower {
       position: absolute;
       width: 20px;
@@ -19,12 +32,7 @@
       pointer-events: none;
       transform: translate(-50%, -50%);
     }
-    #image {
-      position: absolute;
-      top: 100px;
-      left: 100px;
-      pointer-events: none;
-    }
+
     canvas {
       display: none;
     }
@@ -42,40 +50,36 @@
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
 
-  img.onload = () => {
-    canvas.width = img.width;
-    canvas.height = img.height;
+  function updateCanvas() {
+    // Draw full-screen image to canvas
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+  }
+
+  img.onload = () => {
+    updateCanvas();
   };
+
+  window.addEventListener('resize', updateCanvas);
 
   document.addEventListener('mousemove', (e) => {
     const mouseX = e.clientX;
     const mouseY = e.clientY;
 
-    const imgRect = img.getBoundingClientRect();
-    const relX = mouseX - imgRect.left;
-    const relY = mouseY - imgRect.top;
+    const pixel = ctx.getImageData(mouseX, mouseY, 1, 1).data;
+    const alpha = pixel[3]; // alpha value (0 = transparent)
 
-    // Only check collision if mouse is within image bounds
-    if (
-      relX >= 0 && relX < img.width &&
-      relY >= 0 && relY < img.height
-    ) {
-      const pixel = ctx.getImageData(relX, relY, 1, 1).data;
-      const alpha = pixel[3]; // alpha channel
-
-      if (alpha > 0) {
-        // touching a solid (non-transparent) pixel
-        follower.style.backgroundColor = 'white'; // just for visual feedback
-        return;
-      }
+    if (alpha > 0) {
+      // touching a solid part
+      follower.style.backgroundColor = 'white';
+    } else {
+      follower.style.backgroundColor = 'red';
     }
 
-    // Not touching or only transparent
     follower.style.left = mouseX + 'px';
     follower.style.top = mouseY + 'px';
-    follower.style.backgroundColor = 'red';
   });
 </script>
 
