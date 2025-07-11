@@ -19,7 +19,7 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      object-fit: cover; /* Stretch and maintain aspect ratio */
+      object-fit: cover;
       pointer-events: none;
     }
 
@@ -50,8 +50,12 @@
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
 
+  let currentImage = 'test.png';
+  const image1 = 'test.png';
+  const image2 = 'test2.png';
+  let switched = false;
+
   function updateCanvas() {
-    // Draw full-screen image to canvas
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -69,13 +73,20 @@
     const mouseY = e.clientY;
 
     const pixel = ctx.getImageData(mouseX, mouseY, 1, 1).data;
-    const alpha = pixel[3]; // alpha value (0 = transparent)
+    const [r, g, b, a] = pixel;
 
-    if (alpha > 0) {
-      // touching a solid part
+    // Check for solid pixel
+    if (a > 0) {
       follower.style.backgroundColor = 'white';
     } else {
       follower.style.backgroundColor = 'red';
+    }
+
+    // Check for pure green (RGB = 0,255,0)
+    if (r === 0 && g === 255 && b === 0 && !switched) {
+      console.log("Touched green, switching image");
+      switched = true;
+      img.src = image2;
     }
 
     follower.style.left = mouseX + 'px';
