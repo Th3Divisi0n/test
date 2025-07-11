@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Red Ball Avoids PNG</title>
+  <title>Red Ball with Hitboxes</title>
   <style>
     html, body {
       margin: 0;
@@ -34,7 +34,10 @@
     }
 
     canvas {
-      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -50,16 +53,44 @@
   const canvas = document.getElementById('canvas');
   const ctx = canvas.getContext('2d');
 
-  let currentImage = 'test2.png';
-  const image1 = 'test2.png';
+  const image1 = 'test.png';
   const image2 = 'test2.png';
+
   let switched = false;
 
+  // Hitboxes (blue rectangles): [x, y, width, height]
+  const hitboxes = [
+    { x: 300, y: 200, width: 100, height: 100 }, // example box
+    { x: 600, y: 400, width: 150, height: 80 },  // another
+  ];
+
+  // Starting position
+  const startPos = { x: 100, y: 100 };
+
+  // Set canvas size and redraw everything
   function updateCanvas() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    // Draw blue hitboxes
+    ctx.strokeStyle = 'blue';
+    ctx.lineWidth = 3;
+    hitboxes.forEach(box => {
+      ctx.strokeRect(box.x, box.y, box.width, box.height);
+    });
+  }
+
+  function resetLevel() {
+    img.src = image1;
+    switched = false;
+    moveFollower(startPos.x, startPos.y);
+  }
+
+  function moveFollower(x, y) {
+    follower.style.left = x + 'px';
+    follower.style.top = y + 'px';
   }
 
   img.onload = () => {
@@ -75,23 +106,40 @@
     const pixel = ctx.getImageData(mouseX, mouseY, 1, 1).data;
     const [r, g, b, a] = pixel;
 
-    // Check for solid pixel
+    // Touching solid
     if (a > 0) {
       follower.style.backgroundColor = 'white';
     } else {
       follower.style.backgroundColor = 'red';
     }
 
-    // Check for pure green (RGB = 0,255,0)
+    // Touching green = go to level 2
     if (r === 0 && g === 255 && b === 0 && !switched) {
-      console.log("Touched green, switching image");
       switched = true;
       img.src = image2;
+      img.onload = updateCanvas;
     }
 
-    follower.style.left = mouseX + 'px';
-    follower.style.top = mouseY + 'px';
+    // Check hitboxes
+    for (const box of hitboxes) {
+      if (
+        mouseX >= box.x &&
+        mouseX <= box.x + box.width &&
+        mouseY >= box.y &&
+        mouseY <= box.y + box.height
+      ) {
+        console.log("Hitbox touched! Resetting...");
+        resetLevel();
+        return;
+      }
+    }
+
+    // Move red ball
+    moveFollower(mouseX, mouseY);
   });
+
+  // Set initial position
+  moveFollower(startPos.x, startPos.y);
 </script>
 
 </body>
